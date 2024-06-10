@@ -17,9 +17,26 @@ class UDPClient():
             try:
                 data, addr = self.sckt.recvfrom(self.MAX_BUFF)
             
-            except:
-                continue
+                print("Received", data.decode(), "from", addr)
+
+            except Exception as e:
+                if e == KeyboardInterrupt:
+                    self.sckt.close()
+                    break
+                else:
+                    continue
     
     def send(self, server_addr, msg):
-        self.sckt.sendto(msg, server_addr)
+        self.sckt.sendto(msg.encode(), server_addr)
+        print("Sent", msg, "to", server_addr)
         time.sleep(0.0001)
+
+
+def main():
+    client = UDPClient(socket.AF_INET, socket.SOCK_DGRAM, ("localhost", 8091), 1024)
+    client.send(("localhost", 8092), "olá servidor")
+    client.listen()
+
+
+if __name__ == "__main__":
+    main()
