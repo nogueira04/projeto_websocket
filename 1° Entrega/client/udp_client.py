@@ -13,6 +13,7 @@ class UDPClient():
         self.MAX_BUFF = MAX_BUFF
     
     def listen(self, file_path):
+        packet_number = 0
         with open(file_path, "wb") as file:
             while True:
                 try:
@@ -22,7 +23,8 @@ class UDPClient():
                         break
 
                     file.write(data)
-                    print("File ", file_path, " received from ", addr)
+                    packet_number += 1
+                    print("Packet ", packet_number, " received from ", addr)
                 
                 except Exception as e:
                     if e == KeyboardInterrupt:
@@ -32,22 +34,25 @@ class UDPClient():
                         continue
     
     def send(self, server_addr, file_path):
+        packet_number = 0
         with open(file_path, "rb") as file:
             while True:
                 data = file.read(self.MAX_BUFF)
                 if not data:
                     break
                 self.sckt.sendto(data, server_addr)
+                packet_number += 1
                 
         self.sckt.sendto(b'', server_addr)
-        print("File ", file_path, " sent to ", server_addr)
+        print("File", file_path, "sent to", server_addr, "in", packet_number, "packets")
         time.sleep(0.0001)
 
 
 def main():
     client = UDPClient(socket.AF_INET, socket.SOCK_DGRAM, ("localhost", 8091), 1024)
-    client.send(("localhost", 8092), "digit.png")
-    client.listen("received_digit.png")
+    filename = input("Nome of the file to be sent (with extension, ex: .png, .txt): ")
+    client.send(("localhost", 8092), filename)
+    client.listen(f"received_{filename}")
 
 
 if __name__ == "__main__":
