@@ -9,3 +9,14 @@
 </ul> 
 <h2> Instruções de execução </h2>
 
+Em um terminal, execute o código do servidor e insira o nome do arquivo que será recebido:
+
+```
+python3 udp_server.py
+```
+
+Em outro terminal, execute o código do cliente e insira o nome do arquivo que será enviado:
+
+```
+python3 udp_client.py
+```
