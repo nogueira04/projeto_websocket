@@ -3,7 +3,7 @@ import random
 import pickle
 
 class RDT:
-    def __init__(self, udp_socket, buffer_size=1024, loss_probability=0.4):
+    def __init__(self, udp_socket, buffer_size=1024, loss_probability=0.1):
         self.udp_socket = udp_socket
         self.buffer_size = buffer_size
         self.seq_num = 0
@@ -52,6 +52,7 @@ class RDT:
 
     def receive(self, file_path):
         packet_number = 0
+        received_packets = set() 
         with open(file_path, "wb") as file:
             while True:
                 try:
@@ -60,6 +61,14 @@ class RDT:
                         continue
 
                     packet = pickle.loads(data)
+                    if packet['seq'] in received_packets:
+                        # duplicate packet, resend ACK
+                        ack_packet = pickle.dumps({'seq': packet['seq'], 'ack': True})
+                        self.udp_socket.sendto(ack_packet, addr)
+                        continue
+
+                    received_packets.add(packet['seq'])
+
                     if packet['seq'] == self.seq_num:
                         if packet['data'] == b'':
                             break
@@ -68,7 +77,7 @@ class RDT:
                         ack_packet = pickle.dumps({'seq': packet['seq'], 'ack': True})
                         self.udp_socket.sendto(ack_packet, addr)
                         packet_number += 1
-                        print("Packet", packet_number, "received from", addr, ": ", len(packet['data']), "bytes")
+                        print(f"Packet {packet_number} received from {addr}: {len(packet['data'])} bytes")
 
                 except (socket.timeout, pickle.UnpicklingError) as e:
                     continue
