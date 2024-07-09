@@ -12,15 +12,13 @@ class UDPServer:
 
     def receive(self, file_path):
         self.rdt.receive(file_path)
-        # Ensure EOF is properly handled
-        self.rdt.send(b'', ("localhost", 8092))  # Send ACK for EOF to client
-
+        print(f"Received file saved as {file_path}")
 
     def send(self, client_addr, file_path):
         with open(file_path, "rb") as file:
             data = file.read()
         self.rdt.send(data, client_addr)
-        # Remove redundant EOF send
+        print(f"Sent file {file_path} to {client_addr}")
 
 def main():
     server = UDPServer(socket.AF_INET, socket.SOCK_DGRAM, ("localhost", 8092), 1024)
