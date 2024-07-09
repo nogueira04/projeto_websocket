@@ -1,6 +1,5 @@
 import socket
 import random
-import pickle
 
 class RDT:
     def __init__(self, udp_socket, buffer_size=1024, loss_probability=0.1):
@@ -8,82 +7,94 @@ class RDT:
         self.buffer_size = buffer_size
         self.seq_num = 0
         self.loss_probability = loss_probability
+        self.udp_socket.settimeout(1)  
 
     def simulate_packet_loss(self):
         return random.random() < self.loss_probability
 
-    def send_packet(self, data, addr):
-        packet = pickle.dumps({'seq': self.seq_num, 'data': data})
+    def send_packet(self, seq_num, data, addr):
+        seq_bytes = seq_num.to_bytes(1, byteorder='big') 
+        packet = seq_bytes + data  
         self.udp_socket.sendto(packet, addr)
+        print(f"Sent packet {seq_num}: {len(data)} bytes")
 
     def receive_packet(self):
         data, addr = self.udp_socket.recvfrom(self.buffer_size)
-        packet = pickle.loads(data)
-        return packet, addr
+        seq_num = int.from_bytes(data[:1], byteorder='big') 
+        data = data[1:] 
+        return {'seq': seq_num, 'data': data}, addr
 
     def send(self, data, addr):
         packet_number = 0
         data_length = len(data)
-        while packet_number * (self.buffer_size - 128) < data_length:
-            start = packet_number * (self.buffer_size - 128)
-            end = min((packet_number + 1) * (self.buffer_size - 128), data_length)
+        while packet_number * (self.buffer_size - 1) < data_length:  # account for sequence number
+            start = packet_number * (self.buffer_size - 1)
+            end = min((packet_number + 1) * (self.buffer_size - 1), data_length)
             packet_data = data[start:end]
-            packet = pickle.dumps({'seq': self.seq_num, 'data': packet_data})
-            ack_received = False
-            while not ack_received:
-                if not self.simulate_packet_loss():
-                    self.udp_socket.sendto(packet, addr)
-                    print(f"Sent packet {packet_number + 1}: {len(packet_data)} bytes")
 
+            while True:
+                self.send_packet(self.seq_num, packet_data, addr)
                 try:
-                    ack, _ = self.udp_socket.recvfrom(self.buffer_size)
-                    ack_packet = pickle.loads(ack)
-                    if ack_packet['seq'] == self.seq_num and ack_packet['ack']:
-                        ack_received = True
-                        self.seq_num = 1 - self.seq_num
-                        packet_number += 1
-                        print(f"Received ACK for packet {packet_number}")
+                    ack_packet, _ = self.udp_socket.recvfrom(self.buffer_size)
+                    ack_seq = int.from_bytes(ack_packet[:1], byteorder='big')
+                    if ack_seq == self.seq_num:
+                        print(f"ACK for packet {self.seq_num} received")
+                        break
                 except socket.timeout:
-                    print(f"Timeout for packet {packet_number + 1}, retransmitting...")
+                    print(f"Timeout, resending packet {self.seq_num}")
 
-        end_packet = pickle.dumps({'seq': self.seq_num, 'data': b''})
-        self.udp_socket.sendto(end_packet, addr)
-        print("File sent in", packet_number, "packets")
+            packet_number += 1
+            self.seq_num += 1  
+
+        # send end of file packet
+        eof_seq_num = self.seq_num  
+        while True:
+            self.send_packet(eof_seq_num, b'', addr)
+            print("End of file sent")
+            try:
+                ack_packet, _ = self.udp_socket.recvfrom(self.buffer_size)
+                ack_seq = int.from_bytes(ack_packet[:1], byteorder='big')
+                if ack_seq == eof_seq_num:
+                    print(f"ACK for EOF packet received")
+                    break
+            except socket.timeout:
+                print("Timeout, resending EOF packet")
 
     def receive(self, file_path):
-        packet_number = 0
-        received_packets = set() 
+        expected_seq_num = 0
+        
         with open(file_path, "wb") as file:
             while True:
                 try:
-                    data, addr = self.udp_socket.recvfrom(self.buffer_size)
-                    if not data:
+                    packet, addr = self.receive_packet()
+                    
+                    if self.simulate_packet_loss():
+                        print(f"Simulated packet loss for packet {packet['seq']}")
                         continue
 
-                    packet = pickle.loads(data)
-                    if packet['seq'] in received_packets:
-                        # duplicate packet, resend ACK
-                        ack_packet = pickle.dumps({'seq': packet['seq'], 'ack': True})
+                    if packet['seq'] < expected_seq_num:
+                        print(f"Duplicate packet {packet['seq']} received, resending ACK")
+                        ack_packet = packet['seq'].to_bytes(1, byteorder='big')
                         self.udp_socket.sendto(ack_packet, addr)
                         continue
 
-                    received_packets.add(packet['seq'])
-
-                    if packet['seq'] == self.seq_num:
-                        if packet['data'] == b'':
+                    if packet['seq'] == expected_seq_num:
+                        if packet['data'] == b'':  # EOF packet
+                            ack_packet = packet['seq'].to_bytes(1, byteorder='big')
+                            self.udp_socket.sendto(ack_packet, addr)
+                            print("EOF packet received, closing connection")
                             break
+                        
                         file.write(packet['data'])
-                        self.seq_num = 1 - self.seq_num
-                        ack_packet = pickle.dumps({'seq': packet['seq'], 'ack': True})
+                        print(f"Packet {expected_seq_num} received from {addr}: {len(packet['data'])} bytes")
+                        expected_seq_num += 1
+                        ack_packet = packet['seq'].to_bytes(1, byteorder='big')
                         self.udp_socket.sendto(ack_packet, addr)
-                        packet_number += 1
-                        print(f"Packet {packet_number} received from {addr}: {len(packet['data'])} bytes")
 
-                except (socket.timeout, pickle.UnpicklingError) as e:
-                    continue
+                except socket.timeout:
+                    print(f"Timeout occurred. Waiting for packet {expected_seq_num}")
 
-        print("File received")
-        return addr
+        print("File reception complete")
 
     def close(self):
         print("Closing socket")
