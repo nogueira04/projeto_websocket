@@ -3,16 +3,14 @@ from udp_rdt_server import UDPServer
 from server_cmds import ServerCommands
 
 def main():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('localhost', 5000))
-    server = UDPServer(server_socket, 1024)
+    server = UDPServer(socket.AF_INET, socket.SOCK_DGRAM, ("localhost", 5000), 1024)
     server_commands = ServerCommands(server)
 
     while True:
         data, address = server.receive()
-        command_parts = data.decode().split()
+        command_parts = data.split()
         command = command_parts[0]
-        
+        print(f"Received command {command} from {address}")
         username = command_parts[1] if len(command_parts) > 1 else None
 
         if command == "login":

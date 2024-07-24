@@ -7,27 +7,29 @@ class RDT:
         self.buffer_size = buffer_size
         self.seq_num = 0
         self.loss_probability = loss_probability
-        self.udp_socket.settimeout(1)  
+        self.udp_socket.settimeout(1)
+        self.expected_seq_num = 0
 
     def simulate_packet_loss(self):
         return random.random() < self.loss_probability
 
     def send_packet(self, seq_num, data, addr):
-        seq_bytes = seq_num.to_bytes(1, byteorder='big') 
-        packet = seq_bytes + data  
+        seq_bytes = seq_num.to_bytes(1, byteorder='big')
+        packet = seq_bytes + data
         self.udp_socket.sendto(packet, addr)
         print(f"Sent packet {seq_num}: {len(data)} bytes")
 
     def receive_packet(self):
         data, addr = self.udp_socket.recvfrom(self.buffer_size)
-        seq_num = int.from_bytes(data[:1], byteorder='big') 
-        data = data[1:] 
+        seq_num = int.from_bytes(data[:1], byteorder='big')
+        data = data[1:]
         return {'seq': seq_num, 'data': data}, addr
 
-    def send(self, data, addr):
+    def send(self, addr, message):
+        data = message.encode('utf-8')
         packet_number = 0
         data_length = len(data)
-        while packet_number * (self.buffer_size - 1) < data_length:  # account for sequence number
+        while packet_number * (self.buffer_size - 1) < data_length:
             start = packet_number * (self.buffer_size - 1)
             end = min((packet_number + 1) * (self.buffer_size - 1), data_length)
             packet_data = data[start:end]
@@ -44,57 +46,59 @@ class RDT:
                     print(f"Timeout, resending packet {self.seq_num}")
 
             packet_number += 1
-            self.seq_num += 1  
+            self.seq_num = (self.seq_num + 1) % 256  # Keep seq_num within 1 byte
 
-        # send end of file packet
-        eof_seq_num = self.seq_num  
+        # send end of message packet
+        eof_seq_num = self.seq_num
         while True:
             self.send_packet(eof_seq_num, b'', addr)
-            print("End of file sent")
+            print("End of message sent")
             try:
                 ack_packet, _ = self.udp_socket.recvfrom(self.buffer_size)
                 ack_seq = int.from_bytes(ack_packet[:1], byteorder='big')
                 if ack_seq == eof_seq_num:
-                    print(f"ACK for EOF packet received")
+                    print(f"ACK for end of message packet received")
                     break
             except socket.timeout:
-                print("Timeout, resending EOF packet")
+                print("Timeout, resending end of message packet")
 
-    def receive(self, file_path):
-        expected_seq_num = 0
-        
-        with open(file_path, "wb") as file:
-            while True:
-                try:
-                    packet, addr = self.receive_packet()
-                    
-                    if self.simulate_packet_loss():
-                        print(f"Simulated packet loss for packet {packet['seq']}")
-                        continue
+    def receive(self):
+        received_data = []
 
-                    if packet['seq'] < expected_seq_num:
-                        print(f"Duplicate packet {packet['seq']} received, resending ACK")
+        while True:
+            try:
+                packet, addr = self.receive_packet()
+                print(f"Received packet {packet['seq']} from {addr}")
+                print(f"Expected packet {self.expected_seq_num}", "Packet received", packet['seq'])
+                if self.simulate_packet_loss():
+                    print(f"Simulated packet loss for packet {packet['seq']}")
+                    continue
+
+                if packet['seq'] < self.expected_seq_num:
+                    print(f"Duplicate packet {packet['seq']} received, resending ACK")
+                    ack_packet = packet['seq'].to_bytes(1, byteorder='big')
+                    self.udp_socket.sendto(ack_packet, addr)
+                    continue
+
+                if packet['seq'] == self.expected_seq_num:
+                    if packet['data'] == b'':  # End of message packet
                         ack_packet = packet['seq'].to_bytes(1, byteorder='big')
                         self.udp_socket.sendto(ack_packet, addr)
-                        continue
+                        print("End of message packet received, closing connection")
+                        break
 
-                    if packet['seq'] == expected_seq_num:
-                        if packet['data'] == b'':  # EOF packet
-                            ack_packet = packet['seq'].to_bytes(1, byteorder='big')
-                            self.udp_socket.sendto(ack_packet, addr)
-                            print("EOF packet received, closing connection")
-                            break
-                        
-                        file.write(packet['data'])
-                        print(f"Packet {expected_seq_num} received from {addr}: {len(packet['data'])} bytes")
-                        expected_seq_num += 1
-                        ack_packet = packet['seq'].to_bytes(1, byteorder='big')
-                        self.udp_socket.sendto(ack_packet, addr)
+                    received_data.append(packet['data'])
+                    print(f"Packet {self.expected_seq_num} received from {addr}: {len(packet['data'])} bytes")
+                    self.expected_seq_num = (self.expected_seq_num + 1) % 256
+                    ack_packet = packet['seq'].to_bytes(1, byteorder='big')
+                    self.udp_socket.sendto(ack_packet, addr)
 
-                except socket.timeout:
-                    print(f"Timeout occurred. Waiting for packet {expected_seq_num}")
+            except socket.timeout:
+                print(f"Timeout occurred. Waiting for packet {self.expected_seq_num}")
 
-        print("File reception complete")
+        message = b''.join(received_data).decode('utf-8')
+        print("Message reception complete")
+        return message, addr
 
     def close(self):
         print("Closing socket")
