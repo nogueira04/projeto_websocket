@@ -1,15 +1,15 @@
 import socket
-from udp_rdt import RDT
+from udp_rdt_server import UDPServer
 from server_cmds import ServerCommands
 
 def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('localhost', 5000))
-    rdt = RDT(server_socket)
-    server_commands = ServerCommands(rdt)
+    server = UDPServer(server_socket, 1024)
+    server_commands = ServerCommands(server)
 
     while True:
-        data, address = rdt.receive()
+        data, address = server.receive()
         command_parts = data.decode().split()
         command = command_parts[0]
         

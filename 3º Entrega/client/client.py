@@ -1,13 +1,13 @@
 import socket
-from udp_rdt import RDT
+from udp_rdt_client import UDPClient
 from client_cmds import ClientCommands
 
 def main():
     username = input("Insira seu nome: ")
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = ('localhost', 5000)
-    rdt = RDT(client_socket)
-    client_commands = ClientCommands(rdt, username, server_address)
+    client =  UDPClient(client_socket, server_address, 1024)
+    client_commands = ClientCommands(client, username, server_address)
 
     while True:
         command = input("Insira o comando: ")
