@@ -7,10 +7,20 @@ class ClientCommands:
     def login(self):
         command = f"login {self.username}"
         self.rdt.send(command, self.address)
+        response, _ = self.rdt.receive()
+        print(response)
+        if "online" in response:
+            self.logged_in = True  # Marca o cliente como logado
 
     def logout(self):
+        if not self.logged_in:
+            print("Você não está logado.")
+            return
         command = "logout"
         self.rdt.send(command, self.address)
+        response, _ = self.rdt.receive()
+        print(response)
+        self.logged_in = False  # Marca o cliente como deslogado
 
     def list_my_accommodations(self):
         command = "list:myacmd"
@@ -25,8 +35,13 @@ class ClientCommands:
         self.rdt.send(command, self.address)
 
     def create_accommodation(self, name, location, description):
+        if not self.logged_in:
+            print("Você precisa estar logado para criar uma acomodação.")
+            return
         command = f"create {name} {location} {description}"
-        self.rdt.send(command, self.address)
+        self.rdt.send(command.encode(), self.address)
+        response, _ = self.rdt.receive()
+        print(response.decode())
 
     def book_accommodation(self, owner, name, location, day, room):
         command = f"book {owner} {name} {location} {day} {room}"

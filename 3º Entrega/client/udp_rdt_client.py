@@ -12,6 +12,7 @@ class UDPClient:
     def send(self, server_addr, data):
         self.rdt.send(data, server_addr)
 
-    def receive(self, file_path):
+#removi file path daqui, pois não entendi que arquivo estariamos mandando? --lorenzo
+    def receive(self):
         return self.rdt.receive()
         

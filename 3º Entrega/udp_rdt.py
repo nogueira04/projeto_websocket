@@ -26,7 +26,11 @@ class RDT:
         return {'seq': seq_num, 'data': data}, addr
 
     def send(self, addr, message):
-        data = message.encode('utf-8')
+        if isinstance(message, str):
+            data = message.encode('utf-8')
+        else:
+            data = message
+
         packet_number = 0
         data_length = len(data)
         while packet_number * (self.buffer_size - 1) < data_length:
