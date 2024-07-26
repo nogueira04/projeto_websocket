@@ -28,6 +28,7 @@ class ServerCommands:
             response = "Acomodação já existente!"
         else:
             self.accommodations[key] = description
+            print(f"Usuário {username} criou acomodação {name} em {location}")
             response = f"Acomodação de nome {name} criada com sucesso!"
             self.broadcast(f"[{username}/{address}] Nova acomodação: {name} em {location}", exclude=address)
         self.rdt.send(response.encode(), address)

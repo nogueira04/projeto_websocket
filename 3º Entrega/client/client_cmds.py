@@ -3,6 +3,7 @@ class ClientCommands:
         self.rdt = rdt
         self.username = username
         self.address = address
+        self.logged_in = False
 
     def login(self):
         command = f"login {self.username}"
@@ -16,7 +17,7 @@ class ClientCommands:
         if not self.logged_in:
             print("Você não está logado.")
             return
-        command = "logout"
+        command = f"logout {self.username}"
         self.rdt.send(command, self.address)
         response, _ = self.rdt.receive()
         print(response)
@@ -41,7 +42,7 @@ class ClientCommands:
         command = f"create {name} {location} {description}"
         self.rdt.send(command.encode(), self.address)
         response, _ = self.rdt.receive()
-        print(response.decode())
+        print(response)
 
     def book_accommodation(self, owner, name, location, day, room):
         command = f"book {owner} {name} {location} {day} {room}"
