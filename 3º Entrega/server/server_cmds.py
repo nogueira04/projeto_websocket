@@ -7,7 +7,7 @@ class ServerCommands:
         self.accommodations = {}  # {(name, location): {"id": id, "description": description, "owner": username, "availability": set(dates)}}
         self.reservations = {}  # {("owner, name, location, day): username}
 
-    def handle_login(self, address, username):
+    def handle_login(self, address, username):  #mudei a forma de login, pois o username não estava sendo passado como argumento em outras funções por conta da linha (username = command_parts[1] if len(command_parts) > 1 else None) em server.py(também alterado) -- mariana
         print(f"Tentativa de login: username={username}, address={address}")
         if address in self.users:
             response = "Usuário já está logado!"
@@ -24,7 +24,7 @@ class ServerCommands:
         self.rdt.send(response.encode(), address)
         print(f"Resposta enviada para {address}: {response}")
 
-    def handle_logout(self, address):
+    def handle_logout(self, address):   #mudei a forma de logout, pois o username não estava sendo passado como argumento em outras funções por conta da linha (username = command_parts[1] if len(command_parts) > 1 else None) em server.py(também alterado) -- mariana
         print(f"Tentativa de logout: address={address}")
         if address in self.users:
             username = self.users[address]
@@ -39,7 +39,7 @@ class ServerCommands:
         self.rdt.send(response.encode(), address)
         print(f"Resposta enviada para {address}: {response}")
 
-    def handle_create_accommodation(self, address, name, location, description):
+    def handle_create_accommodation(self, address, name, location, description): #adicionei as datas para reservas e a função de availability das datas -- mariana
         username = self.users.get(address)
         print(f"Tentativa de criação de acomodação: username={username}, address={address}, name={name}, location={location}, description={description}")
         key = (name, location)
