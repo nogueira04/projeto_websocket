@@ -44,8 +44,8 @@ class ClientCommands:
         response, _ = self.rdt.receive()
         print(response)
 
-    def book_accommodation(self, owner, name, location, day, room):
-        command = f"book {owner} {name} {location} {day} {room}"
+    def book_accommodation(self, name, location, day):
+        command = f"book {name} {location} {day}"
         self.rdt.send(command, self.address)
 
     def cancel_reservation(self, owner, name, location, day):

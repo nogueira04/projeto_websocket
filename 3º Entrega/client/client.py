@@ -4,7 +4,7 @@ from client_cmds import ClientCommands
 
 def main():
     server_address = ("localhost", 5000)
-    client = UDPClient(socket.AF_INET, socket.SOCK_DGRAM, ('localhost', 6000), 1024)
+    client = UDPClient(socket.AF_INET, socket.SOCK_DGRAM, ('localhost', 0), 1024)
     username = input("Insira o nome de usuário: ")
     client_commands = ClientCommands(client, username, server_address)
 
@@ -24,8 +24,8 @@ def main():
             _, name, location, description = command.split(' ', 3)
             client_commands.create_accommodation(name, location, description)
         elif command.startswith("book"):
-            _, owner, name, location, day, room = command.split(' ', 5)
-            client_commands.book_accommodation(owner, name, location, day, room)
+            _, name, location, day = command.split(' ', 3)
+            client_commands.book_accommodation(name, location, day)
         elif command.startswith("cancel"):
             _, owner, name, location, day = command.split(' ', 4)
             client_commands.cancel_reservation(owner, name, location, day)

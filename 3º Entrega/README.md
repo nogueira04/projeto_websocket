@@ -1,7 +1,7 @@
 Para executar o projeto, primeiro, é necessário definir a variável de ambiente PYTHONPATH:
 
 ```
-export PYTHONPATH="caminho/ate/a/pasta/projeto/projeto_websocket"
+export PYTHONPATH="/home/mariana/Documents/projeto_websocket/3º Entrega"
 ```
 
 Após isso, basta executar o servidor e informar o nome do arquivo que será recebido:
