@@ -17,7 +17,7 @@ class RDT:
         seq_bytes = seq_num.to_bytes(1, byteorder='big')
         packet = seq_bytes + data
         self.udp_socket.sendto(packet, addr)
-        print(f"Sent packet {seq_num}: {len(data)} bytes")
+        print(f"Sent packet {seq_num} to {addr}: {len(data)} bytes")
 
     def receive_packet(self):
         data, addr = self.udp_socket.recvfrom(self.buffer_size)
@@ -44,7 +44,7 @@ class RDT:
                     ack_packet, _ = self.udp_socket.recvfrom(self.buffer_size)
                     ack_seq = int.from_bytes(ack_packet[:1], byteorder='big')
                     if ack_seq == self.seq_num:
-                        print(f"ACK for packet {self.seq_num} received")
+                        print(f"ACK for packet {self.seq_num} received from {addr}")
                         break
                 except socket.timeout:
                     print(f"Timeout, resending packet {self.seq_num}")
@@ -56,15 +56,15 @@ class RDT:
         eof_seq_num = self.seq_num
         while True:
             self.send_packet(eof_seq_num, b'', addr)
-            print("End of message sent")
+            print(f"End of message packet {eof_seq_num} sent to {addr}")
             try:
                 ack_packet, _ = self.udp_socket.recvfrom(self.buffer_size)
                 ack_seq = int.from_bytes(ack_packet[:1], byteorder='big')
                 if ack_seq == eof_seq_num:
-                    print(f"ACK for end of message packet received")
+                    print(f"ACK for end of message packet {eof_seq_num} received from {addr}")
                     break
             except socket.timeout:
-                print("Timeout, resending end of message packet")
+                print(f"Timeout, resending end of message packet {eof_seq_num}")
 
     def receive(self):
         received_data = []
@@ -73,13 +73,12 @@ class RDT:
             try:
                 packet, addr = self.receive_packet()
                 print(f"Received packet {packet['seq']} from {addr}")
-                print(f"Expected packet {self.expected_seq_num}", "Packet received", packet['seq'])
                 if self.simulate_packet_loss():
-                    print(f"Simulated packet loss for packet {packet['seq']}")
+                    print(f"Simulated packet loss for packet {packet['seq']} from {addr}")
                     continue
 
                 if packet['seq'] < self.expected_seq_num:
-                    print(f"Duplicate packet {packet['seq']} received, resending ACK")
+                    print(f"Duplicate packet {packet['seq']} received from {addr}, resending ACK")
                     ack_packet = packet['seq'].to_bytes(1, byteorder='big')
                     self.udp_socket.sendto(ack_packet, addr)
                     continue
@@ -88,7 +87,7 @@ class RDT:
                     if packet['data'] == b'':  # End of message packet
                         ack_packet = packet['seq'].to_bytes(1, byteorder='big')
                         self.udp_socket.sendto(ack_packet, addr)
-                        print("End of message packet received, closing connection")
+                        print(f"End of message packet {packet['seq']} received from {addr}, closing connection")
                         break
 
                     received_data.append(packet['data'])
@@ -101,7 +100,7 @@ class RDT:
                 print(f"Timeout occurred. Waiting for packet {self.expected_seq_num}")
 
         message = b''.join(received_data).decode('utf-8')
-        print("Message reception complete")
+        print(f"Message reception complete from {addr}")
         return message, addr
 
     def close(self):
