@@ -26,14 +26,20 @@ class ClientCommands:
     def list_my_accommodations(self):
         command = "list:myacmd"
         self.rdt.send(command, self.address)
+        response, _ = self.rdt.receive()
+        print(response)
 
     def list_accommodations(self):
         command = "list:acmd"
         self.rdt.send(command, self.address)
+        response, _ = self.rdt.receive()
+        print(response)
 
     def list_my_reservations(self):
         command = "list:myrsv"
         self.rdt.send(command, self.address)
+        response, _ = self.rdt.receive()
+        print(response)
 
     def create_accommodation(self, name, location, description):
         if not self.logged_in:
