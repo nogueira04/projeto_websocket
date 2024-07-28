@@ -129,41 +129,44 @@ class ServerCommands:
         
         response = "\n\n".join(response)
         self.rdt.send(response.encode(), address)
-    # Lógica parece ok, mas tá com algum errinho pra mandar mensagem na linha 148. Vou procurar resolver.    
+        
     def handle_list_accommodations(self, address):
         username = self.users.get(address)
         if not username:
             response = "Erro: Usuário não está logado."
             self.rdt.send(response.encode(), address)
             return
-        
+
         if not self.accommodations:
             response = "Nenhuma acomodação disponível."
             self.rdt.send(response.encode(), address)
             return
-        
+
         response = ["Acomodações disponíveis:"]
-        for key, acmd in self.accommodations.items():
-            available_days = sorted(date.strftime("%d/%m/%Y") for date in acmd['availability'])
-            reserved_days = sorted(set(datetime.datetime.strptime(date, "%d/%m/%Y") for date in acmd['availability']) - set(acmd['availability']))
-            
-            reserved_days_info = []
-            for date in reserved_days:
-                reservation_info = self.reservations.get((acmd['owner'], acmd['id'].split('_')[0], acmd['id'].split('_')[1], date.strftime('%d/%m/%Y')))
-                if reservation_info:
-                    reserved_days_info.append(f"{date.strftime('%d/%m/%Y')} ({reservation_info})")
-
-            # Remove reserved days from available days
-            available_days = [day for day in available_days if day not in reserved_days_info]
-
+        for acmd in self.accommodations.values():
             acmd_info = f"Nome: {acmd['id'].split('_')[0]}, Localização: {acmd['id'].split('_')[1]}"
+            
+            available_days = sorted(acmd['availability'])
+            available_days_str = sorted(date.strftime("%d/%m/%Y") for date in available_days)
+
+            # Encontrar dias reservados
+            reserved_days = []
+            for date in available_days:
+                date_str = date.strftime('%d/%m/%Y')
+                if (acmd['owner'], acmd['id'].split('_')[0], acmd['id'].split('_')[1], date_str) in self.reservations:
+                    reserved_days.append(f"{date_str} ({self.reservations[(acmd['owner'], acmd['id'].split('_')[0], acmd['id'].split('_')[1], date_str)]})")
+
+            # Remover dias reservados dos dias disponíveis
+            available_days_str = [d for d in available_days_str if d not in [r.split(' ')[0] for r in reserved_days]]
+
             acmd_info += f"\nDescrição: {acmd['description']}"
-            acmd_info += "\n  Dias disponíveis:\n  {}".format('\n  '.join(available_days))
-            acmd_info += "\n  Dias reservados:\n  {}".format('\n  '.join(reserved_days_info) if reserved_days_info else "Nenhum dia reservado.")
+            acmd_info += f"\nOfertante: {acmd['owner']}"
+            acmd_info += "\n  Dias disponíveis:\n  {}".format('\n  '.join(available_days_str))
             response.append(acmd_info)
-        
+
         response = "\n\n".join(response)
         self.rdt.send(response.encode(), address)
+
 
     #Acho que é só isso, mas não consegui testar porque não consegui usar o book.
     def handle_list_my_reservations(self, address):
