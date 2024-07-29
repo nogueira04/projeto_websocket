@@ -63,8 +63,8 @@ class ClientCommands:
         if response is not None:
             print(response)
 
-    def cancel_reservation(self, owner, name, location, day):
-        command = f"cancel {owner} {name} {location} {day}"
+    def cancel_reservation(self, name, location, day):
+        command = f"cancel {name} {location} {day}"
         self.rdt.send(command, self.address)
         response, _ = self.rdt.receive()
         if response is not None:
