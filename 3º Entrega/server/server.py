@@ -8,9 +8,9 @@ def main():
 
     while True:
         data, address = server.receive()
-        print(f"Received data from {address}: {data}")
+        # print(f"Received data from {address}: {data}")
         if not data:
-            print("Received empty data, skipping...")
+            # print("Received empty data, skipping...")
             continue
 
         command_parts = data.split()

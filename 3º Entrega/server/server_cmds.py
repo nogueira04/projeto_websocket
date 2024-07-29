@@ -1,4 +1,5 @@
 import datetime
+import time
 
 class ServerCommands:
     def __init__(self, rdt):
@@ -19,7 +20,6 @@ class ServerCommands:
             self.users[address] = username
             response = "Você está online!"
             print(f"Sucesso no login: {username} foi adicionado com o endereço {address}")
-            self.broadcast(f"[{username}/{address}] entrou no sistema.", exclude=address)
         
         self.rdt.send(response.encode(), address)
         print(f"Resposta enviada para {address}: {response}")
@@ -31,7 +31,6 @@ class ServerCommands:
             del self.users[address]
             response = "Você saiu do sistema!"
             print(f"Sucesso no logout: {username} foi removido.")
-            self.broadcast(f"[{username}/{address}] saiu do sistema.", exclude=address)
         else:
             response = "Erro: Usuário não está logado."
             print(f"Falha no logout: {response}")
@@ -91,6 +90,7 @@ class ServerCommands:
 
     def handle_cancel_reservation(self, address, owner, name, location, day):
         pass
+    
     # Funcionando normal (falta saber lidar com cancel, mas creio que seja independente)
     def handle_list_my_accommodations(self, address):
         username = self.users.get(address)
@@ -183,6 +183,13 @@ class ServerCommands:
         print(f"Resposta enviada para {address}: {response}")
 
     def broadcast(self, message, exclude=None):
+        print(f"Broadcasting message: '{message}' to all users except {exclude}")
         for user_address in self.users:
             if user_address != exclude:
-                self.rdt.send(message.encode(), user_address)
+                try:
+                    print(f"Sending message to {user_address}")
+                    self.rdt.send(message.encode(), user_address)
+                    print(f"Message sent to {user_address}")
+                except Exception as e:
+                    print(f"Failed to send message to {user_address}: {e}")
+
