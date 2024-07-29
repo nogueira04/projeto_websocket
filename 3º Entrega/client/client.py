@@ -76,7 +76,7 @@ def main():
                         print("Uso correto: book <nome> <local> <dia>")
                 elif command.startswith("cancel"):
                     try:
-                        _, owner, name, location, day = command.split(' ', 4)
+                        _, name, location, day = command.split(' ', 3)
                         client_commands.cancel_reservation(name, location, day)
                     except ValueError:
                         print("Uso correto: cancel <nome> <local> <dia>")
