@@ -90,7 +90,47 @@ class ServerCommands:
         print(f"Resposta enviada para {address}: {response}")
 
     def handle_cancel_reservation(self, address, owner, name, location, day):
-        pass
+        username = self.users.get(address)
+        print(f"Tentativa de cancelamento de reserva: username={username}, address={address}, owner={owner}, name={name}, location={location}, day={day}")
+        if not username:
+            response = "Erro: Usuário não está logado."
+            self.rdt.send(response.encode(), address)
+            print(f"Falha no cancelamento: {response}")
+            return
+
+        key = (name, location)
+        if key not in self.accommodations:
+            response = "Acomodação não encontrada!"
+            self.rdt.send(response.encode(), address)
+            print(f"Falha no cancelamento: {response}")
+            return
+
+        reservation_key = (name, location, day)
+        if reservation_key not in self.reservations:
+            response = "Reserva não encontrada!"
+            self.rdt.send(response.encode(), address)
+            print(f"Falha no cancelamento: {response}")
+            return
+
+        if self.reservations[reservation_key] != username:
+            response = "Você só pode cancelar suas próprias reservas."
+            self.rdt.send(response.encode(), address)
+            print(f"Falha no cancelamento: {response}")
+            return
+
+        date = datetime.datetime.strptime(day, "%d/%m/%Y")
+        self.accommodations[key]["availability"].add(date)
+        del self.accommodations[key]["not_available"][date]
+        del self.reservations[reservation_key]
+
+        response = f"Reserva cancelada para {name} em {location} no dia {day}."
+        self.rdt.send(response.encode(), address)
+        print(f"Sucesso no cancelamento: {response}")
+
+        owner_address = next((addr for addr, user in self.users.items() if user == owner), None)
+        if owner_address:
+            self.rdt.send(f"[{username}/{address}] Reserva cancelada: {username} cancelou a reserva na acomodação {name} em {location} no dia {day}".encode(), owner_address)
+
     
     def handle_list_my_accommodations(self, address):
         username = self.users.get(address)
