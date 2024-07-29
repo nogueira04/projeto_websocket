@@ -34,8 +34,8 @@ def main():
                 _, name, location, day = command_parts
                 server_commands.handle_book_accommodation(address, name, location, day)
             elif command == "cancel":
-                _, owner, name, location, day = command_parts
-                server_commands.handle_cancel_reservation(address, owner, name, location, day)
+                _, name, location, day = command_parts
+                server_commands.handle_cancel_reservation(address, name, location, day)
             elif command == "list:myacmd":
                 server_commands.handle_list_my_accommodations(address)
             elif command == "list:acmd":
