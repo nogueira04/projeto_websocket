@@ -89,9 +89,9 @@ class ServerCommands:
         self.rdt.send(response.encode(), address)
         print(f"Resposta enviada para {address}: {response}")
 
-    def handle_cancel_reservation(self, address, owner, name, location, day):
+    def handle_cancel_reservation(self, address, name, location, day):
         username = self.users.get(address)
-        print(f"Tentativa de cancelamento de reserva: username={username}, address={address}, owner={owner}, name={name}, location={location}, day={day}")
+        print(f"Tentativa de cancelamento de reserva: username={username}, address={address}, name={name}, location={location}, day={day}")
         if not username:
             response = "Erro: Usuário não está logado."
             self.rdt.send(response.encode(), address)
@@ -127,9 +127,10 @@ class ServerCommands:
         self.rdt.send(response.encode(), address)
         print(f"Sucesso no cancelamento: {response}")
 
-        owner_address = next((addr for addr, user in self.users.items() if user == owner), None)
+        owner_address = next((addr for addr, user in self.users.items() if user == self.accommodations[key]["owner"]), None)
         if owner_address:
             self.rdt.send(f"[{username}/{address}] Reserva cancelada: {username} cancelou a reserva na acomodação {name} em {location} no dia {day}".encode(), owner_address)
+
 
     
     def handle_list_my_accommodations(self, address):
