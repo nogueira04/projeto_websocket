@@ -51,7 +51,7 @@ class ServerCommands:
             end_date = datetime.datetime.strptime("22/07/2024", "%d/%m/%Y")
             availability = {start_date + datetime.timedelta(days=x) for x in range((end_date - start_date).days + 1)}
             not_available = {}
-            self.accommodations[key] = {"id": accommodation_id, "description": id, "owner": username, "availability": availability, "not_available":not_available}
+            self.accommodations[key] = {"address":address, "id": accommodation_id, "description": id, "owner": username, "availability": availability, "not_available":not_available}
             response = f"Acomodação de nome {name} criada com sucesso!"
             print(f"Sucesso na criação: {response}")
             self.broadcast(f"[{username}/{address}] Nova acomodação: {name} em {location}", exclude=address)
@@ -139,30 +139,32 @@ class ServerCommands:
             response = "Erro: Usuário não está logado."
             self.rdt.send(response.encode(), address)
             return
-        
+
         user_accommodations = [acmd for acmd in self.accommodations.values() if acmd["owner"] == username]
         if not user_accommodations:
             response = "Você não tem acomodações."
             self.rdt.send(response.encode(), address)
             return
-        
+
         response = ["Suas acomodações:"]
         for acmd in user_accommodations:
             acmd_info = f"Nome: {acmd['id'].split('_')[0]}, Localização: {acmd['id'].split('_')[1]}"
-            
+
             available_days = sorted(acmd['availability'])
             available_days_str = [date.strftime("%d/%m/%Y") for date in available_days]
-            
-            reserved_days_str = [
-            f"{date.strftime('%d/%m/%Y')} - ({addr[0]}:{addr[1]})"
-            for date, addr in acmd['not_available'].items()
-        ]
-            
-            acmd_info += "\nID da acomodação: {}".format(acmd['description'])
+
+            reserved_days_str = []
+            for date, addr in acmd['not_available'].items():
+                reservation_key = (acmd['id'].split('_')[0], acmd['id'].split('_')[1], date.strftime('%d/%m/%Y'))
+                if reservation_key in self.reservations:
+                    reserver = self.reservations[reservation_key]
+                    reserved_days_str.append(f"{date.strftime('%d/%m/%Y')} - Reservado por {reserver} ({addr[0]}:{addr[1]})")
+
+            acmd_info += "\nID da acomodação: {}".format(acmd['id'])
             acmd_info += "\n  Dias disponíveis:\n  {}".format('\n  '.join(available_days_str))
             acmd_info += "\n  Dias indisponíveis:\n  {}".format('\n  '.join(reserved_days_str) if reserved_days_str else "Nenhum.")
             response.append(acmd_info)
-        
+
         response = "\n\n".join(response)
         self.rdt.send(response.encode(), address)
         print(f"Resposta enviada para {address}: {response}")
@@ -204,8 +206,6 @@ class ServerCommands:
         response = "\n\n".join(response)
         self.rdt.send(response.encode(), address)
 
-
-    #Acho que é só isso, mas não consegui testar porque não consegui usar o book.
     def handle_list_my_reservations(self, address):
         username = self.users.get(address)
         if not username:
@@ -226,8 +226,13 @@ class ServerCommands:
 
         response = ["Suas reservas:"]
         for name, location, day in user_reservations:
-            message = f"Reserva: {name} em {location} no dia {day}"
-            response.append(message)
+            acmd_key = (name, location)
+            if acmd_key in self.accommodations:
+                acmd = self.accommodations[acmd_key]
+                owner = acmd['owner']
+                owner_address = acmd['address']
+                message = f">>> {name} em {location} no dia {day} (Ofertante: {owner} / {owner_address[0]}:{owner_address[1]})"
+                response.append(message)
 
         response = "\n".join(response)
         self.rdt.send(response.encode(), address)
