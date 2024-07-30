@@ -13,6 +13,8 @@ class ClientCommands:
             print(response)
             if "online" in response:
                 self.logged_in = True  # Marca o cliente como logado
+        
+        return self.logged_in
 
     def logout(self):
         if not self.logged_in:

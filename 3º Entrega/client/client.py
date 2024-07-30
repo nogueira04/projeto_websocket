@@ -37,6 +37,8 @@ def main():
     receiver_thread.daemon = True # Termina a thread quando o programa principal termina
     receiver_thread.start()
 
+    logged_in = False
+
     while True:
         command = input("Insira o comando: ").strip()
         if not command:
@@ -45,17 +47,12 @@ def main():
         with print_lock: 
             with receive_lock:
                 if command == "login":
-                    client_commands.login()
+                    logged_in = client_commands.login()
                 elif command == "logout":
                     client_commands.logout()
-
-                    # Solicitar novamente o nome de usuário após o logout
-                    while True:
-                        username = input("Insira o nome de usuário: ").strip()
-                        if username:
-                            break
-                        
+                    logged_in = False
                     client_commands.username = username
+
                 elif command == "list:myacmd":
                     client_commands.list_my_accommodations()
                 elif command == "list:acmd":
@@ -82,6 +79,12 @@ def main():
                         print("Uso correto: cancel <nome> <local> <dia>")
                 else:
                     print("Comando inválido.")
+
+                while not logged_in:
+                        username = input("Insira o nome de usuário: ").strip()
+                        if username:
+                            client_commands.username = username
+                            break
 
 if __name__ == "__main__":
     main()
