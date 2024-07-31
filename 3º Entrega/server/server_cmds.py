@@ -160,7 +160,7 @@ class ServerCommands:
                     reserver = self.reservations[reservation_key]
                     reserved_days_str.append(f"{date.strftime('%d/%m/%Y')} - Reservado por {reserver} ({addr[0]}:{addr[1]})")
 
-            acmd_info += "\nID da acomodação: {}".format(acmd['id'])
+            acmd_info += "\nID da acomodação: {}".format(acmd['description'])
             acmd_info += "\n  Dias disponíveis:\n  {}".format('\n  '.join(available_days_str))
             acmd_info += "\n  Dias indisponíveis:\n  {}".format('\n  '.join(reserved_days_str) if reserved_days_str else "Nenhum.")
             response.append(acmd_info)
